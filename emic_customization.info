@@ -1,0 +1,5 @@
+name = EMiC Customization
+description = "Customizations specific to Islandora EMiC project"
+core = 7.x
+version = 7.x-dev
+package = Islandora
