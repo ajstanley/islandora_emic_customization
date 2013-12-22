@@ -1,0 +1,99 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function emic_customization_menu() {
+  $items['islandora/emic/collection'] = array(
+    'title' => 'Emic Custom Collection',
+    'page callback' => 'islandora_critical_edition_custom_view',
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments' => array(ISLANDORA_CRITICAL_EDITION_ADVANCED_READ),
+    'file' => 'includes/custom_collection_view.inc',
+  );
+  return $items;
+}
+
+/**
+ * Returns custom collection view.
+ *
+ * @param String $collection_pid
+ *   PID of collection being displayed
+ *
+ * @return String
+ *   HTML to display in collection view
+ */
+function islandora_critical_edition_custom_view($collection_pid) {
+  $solr_url = variable_get('islandora_solr_urlx', 'http://stage.emic.dgicloud.com:8080/solr');
+  $request_url = "$solr_url/select?wt=json&q=RELS_EXT_isMemberOf_uri_mt:" . '"' . $collection_pid . '"';
+  $results = file_get_contents($request_url);
+
+  $collection_array = json_decode($results, TRUE);
+  $docs = $collection_array['response']['docs'];
+  if (count($docs) < 1) {
+    return t("This collection is empty.");
+  }
+  $candidate_fields = array(
+    'mods_titleInfo_title_mt' => 'labels',
+    'mods_originInfo_publisher_ms' => 'publishers',
+    'mods_name_role_roleTerm_text_ms' => 'roles',
+    'mods_name_personal_role_roleTerm_text_ms' => 'roles',
+    'mods_name_namePart_ms' => 'creators',
+    'mods_name_personal_namePart_ms' => 'creators',
+  );
+  $results = array();
+  $output = "";
+  foreach ($docs as $doc) {
+    foreach ($candidate_fields as $field => $label) {
+      $results[$doc['PID']][$label] = (isset($doc[$field])) ? $doc[$field] : "";
+    }
+  }
+  foreach ($results as $pid => $data) {
+    $header = array();
+    $rows = array();
+    if (is_array($data['publishers'])) {
+      $publishers = implode(', ', $data['publishers']);
+      $rows[] = array(
+        array(
+          'class' => array('collection_publisher_label collection_label'),
+          'data' => t("Publisher"),
+        ),
+        array(
+          'class' => 'collection_publisher collection_value',
+          'data' => $publishers,
+        ),
+      );
+    }
+    if (is_array($data['roles'])) {
+      $count = count($data['roles']);
+      for ($i = 0; $i < $count; $i++) {
+        $rows[] = array(
+          array(
+            'class' => array('collection_role collection_label'),
+            'data' => ucfirst($data['roles'][$i]),
+          ),
+          array(
+            'class' => ('collection_creator collection_value'),
+            'data' => $data['creators'][$i],
+          ),
+        );
+      }
+    }
+    $title_row = array(
+      array(
+        'data' => '<span class = "emic_custom_pic">Custom Pic goes Here</span>',
+        'rowspan' => count($rows) + 1,
+        'class' => 'emic_custom_pic'
+      ),
+      array(
+        'data' => $data['labels'][0],
+        'colspan' => 2,
+        'class' => 'collection_title'
+      )
+    );
+    array_unshift($rows, $title_row);
+    $output .= theme('table', array('header' => $header, 'rows' => $rows));
+  }
+  return $output;
+}
