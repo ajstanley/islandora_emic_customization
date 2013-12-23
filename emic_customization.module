@@ -34,6 +34,13 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
   if (count($docs) < 1) {
     return t("This collection is empty.");
   }
+  $images = array(
+    'ಠ~ಠ',
+    'ಠoಠ',
+    'ಠxಠ',
+    'ಠ.ಠ'
+    );
+  // Relevant data from the forms in their current state.
   $candidate_fields = array(
     'mods_titleInfo_title_mt' => 'labels',
     'mods_originInfo_publisher_ms' => 'publishers',
@@ -41,12 +48,15 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
     'mods_name_personal_role_roleTerm_text_ms' => 'roles',
     'mods_name_namePart_ms' => 'creators',
     'mods_name_personal_namePart_ms' => 'creators',
+    'mods_relatedItem_originInfo_copyrightDate_dt' => 'date',
   );
   $results = array();
   $output = "";
   foreach ($docs as $doc) {
     foreach ($candidate_fields as $field => $label) {
-      $results[$doc['PID']][$label] = (isset($doc[$field])) ? $doc[$field] : "";
+      if (!isset($results[$doc['PID']][$label])) {
+        $results[$doc['PID']][$label] = (isset($doc[$field])) ? $doc[$field] : "";
+      }
     }
   }
   foreach ($results as $pid => $data) {
@@ -80,14 +90,27 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
         );
       }
     }
+    if ($data['date']) {
+      $date = new DateTime($data['date']);
+      $rows[] = array(
+        array(
+          'class' => array('collection_date_label collection_label'),
+          'data' => t("Copyright date"),
+        ),
+        array(
+          'class' => 'collection_date collection_value',
+          'data' => $date->format('Y'),
+        ),
+      );
+    }
     $title_row = array(
       array(
-        'data' => '',
+        'data' => $images[mt_rand(0,3)],
         'rowspan' => count($rows) + 1,
         'class' => 'emic_custom_pic'
       ),
       array(
-        'data' => $data['labels'][0],
+        'data' => l($data['labels'][0], "islandora/object/$pid/view"),
         'colspan' => 2,
         'class' => 'collection_title'
       ),
