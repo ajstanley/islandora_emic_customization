@@ -1,0 +1,16 @@
+.collection_label {
+  width: 10%;
+}
+.collection_value {
+  width: 60%;
+}
+.emic_custom_pic {
+  width: 10%;
+}
+.emic_custom_pic>img {
+  margin-top: 2%;
+  width: 96%;
+}
+.emic_custom_collection {
+  width: 90%;
+}
