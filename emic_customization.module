@@ -5,7 +5,6 @@
  */
 function emic_customization_menu() {
   $items['islandora/emic/collection'] = array(
-    'title' => 'Emic Custom Collection',
     'page callback' => 'islandora_critical_edition_custom_view',
     'type' => MENU_CALLBACK,
     'access callback' => 'user_access',
@@ -24,11 +23,8 @@ function emic_customization_menu() {
  *   HTML to display in collection view
  */
 function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
-  $start = $limit * pager_find_page();
-  $solr_url = variable_get('islandora_solr_urlx   ', 'http://stage.emic.dgicloud.com:8080/solr');
-  $request_url = "$solr_url/select?wt=json&start=$start&rows=$limit&q=RELS_EXT_isMemberOf_uri_mt:" . '"' . $collection_pid . '"';
-  $solr_results = file_get_contents($request_url);
-  $collection_array = json_decode($solr_results, TRUE);
+  $offset = $limit * pager_find_page();
+  $collection_array = emic_data($collection_pid, $offset, 12);
   $total = $collection_array['response']['numFound'];
   $docs = $collection_array['response']['docs'];
   if (count($docs) < 1) {
@@ -121,4 +117,34 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
   }
   $pager = theme('pager', array($quantity = 10));
   return $pager . $output;
+}
+
+/**
+ * Gets Collection Memebers from Solr.
+ *
+ * @param String $collection_pid
+ *   PID of collection being queried
+ * @param integer $offset
+ *   Query offset
+ * @param integer $limit
+ *   Query limit
+ *
+ * @return array
+ *   Array fo returned solr values
+ */
+function emic_data($collection_pid, $offset = 0, $limit = 25) {
+  $query = 'RELS_EXT_isMemberOf_uri_mt:' . '"'.$collection_pid.'"';
+  $url = parse_url(variable_get('islandora_solr_url', 'http://stage.emic.dgicloud.com:8080/solr'));
+  $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
+  $solr->setCreateDocuments(0);
+  $versions = array();
+  try {
+    $results = $solr->search($query, $offset, $limit);
+    $results = json_decode($results->getRawResponse(), TRUE);
+
+  }
+  catch (Exception $e) {
+    watchdog_exception('emic customizations', $e, 'Got an exception while searching for collection.', array(), WATCHDOG_ERROR);
+  }
+  return $results;
 }
