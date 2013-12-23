@@ -10,7 +10,6 @@ function emic_customization_menu() {
     'type' => MENU_CALLBACK,
     'access callback' => 'user_access',
     'access arguments' => array(ISLANDORA_CRITICAL_EDITION_ADVANCED_READ),
-    'file' => 'includes/custom_collection_view.inc',
   );
   return $items;
 }
@@ -24,12 +23,13 @@ function emic_customization_menu() {
  * @return String
  *   HTML to display in collection view
  */
-function islandora_critical_edition_custom_view($collection_pid) {
-  $solr_url = variable_get('islandora_solr_urlx', 'http://stage.emic.dgicloud.com:8080/solr');
-  $request_url = "$solr_url/select?wt=json&q=RELS_EXT_isMemberOf_uri_mt:" . '"' . $collection_pid . '"';
-  $results = file_get_contents($request_url);
-
-  $collection_array = json_decode($results, TRUE);
+function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
+  $start = $limit * pager_find_page();
+  $solr_url = variable_get('islandora_solr_urlx   ', 'http://stage.emic.dgicloud.com:8080/solr');
+  $request_url = "$solr_url/select?wt=json&start=$start&rows=$limit&q=RELS_EXT_isMemberOf_uri_mt:" . '"' . $collection_pid . '"';
+  $solr_results = file_get_contents($request_url);
+  $collection_array = json_decode($solr_results, TRUE);
+  $total = $collection_array['response']['numFound'];
   $docs = $collection_array['response']['docs'];
   if (count($docs) < 1) {
     return t("This collection is empty.");
@@ -82,7 +82,7 @@ function islandora_critical_edition_custom_view($collection_pid) {
     }
     $title_row = array(
       array(
-        'data' => '<span class = "emic_custom_pic">Custom Pic goes Here</span>',
+        'data' => '',
         'rowspan' => count($rows) + 1,
         'class' => 'emic_custom_pic'
       ),
@@ -90,10 +90,12 @@ function islandora_critical_edition_custom_view($collection_pid) {
         'data' => $data['labels'][0],
         'colspan' => 2,
         'class' => 'collection_title'
-      )
+      ),
     );
     array_unshift($rows, $title_row);
+    pager_default_initialize($total, $limit);
     $output .= theme('table', array('header' => $header, 'rows' => $rows));
   }
-  return $output;
+  $pager = theme('pager', array($quantity = 10));
+  return $pager . $output;
 }
