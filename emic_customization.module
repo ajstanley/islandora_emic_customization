@@ -31,7 +31,7 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
   if (count($docs) < 1) {
     return t("This collection is empty.");
   }
-  $exclude_list = array(".", "..");
+  $exclude_list = array(".", "..", ".DS_Store");
   $image_dir = "$path/images/";
   $images = array_values(array_diff(scandir($image_dir), $exclude_list));
   // Relevant data from the forms in their current state.
