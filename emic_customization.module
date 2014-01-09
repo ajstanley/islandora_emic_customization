@@ -24,7 +24,7 @@ function emic_customization_menu() {
  */
 function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
   $offset = $limit * pager_find_page();
-  $collection_array = emic_data($collection_pid, $offset, 12);
+  $collection_array = emic_data($collection_pid, $offset, $limit);
   $total = $collection_array['response']['numFound'];
   $docs = $collection_array['response']['docs'];
   $path = drupal_get_path('module', 'emic_customization');
@@ -98,9 +98,9 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
         ),
       );
     }
-    $limit = count($images) -1;
+    $range = count($images) -1;
     $params = array(
-      'path' => $image_dir . $images[mt_rand(0, $limit)],
+      'path' => $image_dir . $images[mt_rand(0, $range)],
     );
     $image = theme('image', $params);
     $title_row = array(
@@ -116,16 +116,18 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
       ),
     );
     array_unshift($rows, $title_row);
-    pager_default_initialize($total, $limit);
+  
     $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('class' => array('emic_custom_collection'))));
   }
-  $pager = theme('pager', array($quantity = 10));
+ 
+  pager_default_initialize($total, $limit);
+  $pager = theme('pager', array($quantity = $limit));
   drupal_add_css("$path/css/emic_customized.css");
   return $pager . $output;
 }
 
 /**
- * Gets Collection Memebers from Solr.
+ * Gets Collection Members from Solr.
  *
  * @param String $collection_pid
  *   PID of collection being queried
