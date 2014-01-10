@@ -48,9 +48,9 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
   $results = array();
   $output = "";
   foreach ($docs as $doc) {
-    foreach ($candidate_fields as $field => $label) {
-      if (!isset($results[$doc['PID']][$label])) {
-        $results[$doc['PID']][$label] = (isset($doc[$field])) ? $doc[$field] : "";
+    foreach ($candidate_fields as $field => $identifier) {
+      if (!isset($results[$doc['PID']][$identifier])) {
+        $results[$doc['PID']][$identifier] = (isset($doc[$field])) ? $doc[$field] : "";
       }
     }
   }
@@ -98,11 +98,12 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
         ),
       );
     }
-    $range = count($images) -1;
+    $range = count($images) - 1;
     $params = array(
       'path' => $image_dir . $images[mt_rand(0, $range)],
     );
     $image = theme('image', $params);
+    $label = isset($data['labels'][0]) ? $data['labels'][0] : t("Unlabled object");
     $title_row = array(
       array(
         'data' => $image,
@@ -110,16 +111,16 @@ function islandora_critical_edition_custom_view($collection_pid, $limit = 12) {
         'class' => 'emic_custom_pic'
       ),
       array(
-        'data' => l($data['labels'][0], "islandora/object/$pid/view"),
+        'data' => l($label, "islandora/object/$pid/view"),
         'colspan' => 2,
         'class' => 'collection_title'
       ),
     );
     array_unshift($rows, $title_row);
-  
+
     $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('class' => array('emic_custom_collection'))));
   }
- 
+
   pager_default_initialize($total, $limit);
   $pager = theme('pager', array($quantity = $limit));
   drupal_add_css("$path/css/emic_customized.css");
@@ -143,7 +144,7 @@ function emic_data($collection_pid, $offset = 0, $limit = 25) {
   $query = 'RELS_EXT_isMemberOf_uri_mt:' . '"' . $collection_pid . '"';
   $url = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
   $solr = new Apache_Solr_Service($url['host'], $url['port'], $url['path'] . '/');
-  $solr->setCreateDocuments(0);
+  $solr->setCreateDocuments(FALSE);
   try {
     $results = $solr->search($query, $offset, $limit);
     $json = json_decode($results->getRawResponse(), TRUE);
@@ -152,4 +153,25 @@ function emic_data($collection_pid, $offset = 0, $limit = 25) {
     watchdog_exception('emic customizations', $e, 'Got an exception while searching for collection.', array(), WATCHDOG_ERROR);
   }
   return $json;
+}
+
+/**
+ * Implements hook_islandora_breadcrumbs_alter().
+ */
+function emic_customization_islandora_breadcrumbs_alter(&$breadcrumbs, $context, $object = NULL) {
+  $objects_to_reroute = array(
+  'islandora:criticalEditionCollection',
+  'islandora:sourceCollection',
+  'islandora%3AcriticalEditionCollection',
+  'islandora%3AsourceCollection',
+  );
+  $url = array_pop($breadcrumbs);
+  preg_match("/href=\"(.*?)\"/i", $url, $matches);
+  $raw_link = $matches[0];
+  $link_parts = explode('/', $raw_link);
+  $link = str_replace('"', '', array_pop($link_parts));
+  if (in_array($link, $objects_to_reroute)) {
+    $url = str_replace('/islandora/object/', '/islandora/emic/collection/', $url);
+  }
+  array_push($breadcrumbs, $url);
 }
