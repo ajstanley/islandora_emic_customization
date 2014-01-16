@@ -160,18 +160,12 @@ function emic_data($collection_pid, $offset = 0, $limit = 25) {
  */
 function emic_customization_islandora_breadcrumbs_alter(&$breadcrumbs, $context, $object = NULL) {
   $objects_to_reroute = array(
-  'islandora:criticalEditionCollection',
-  'islandora:sourceCollection',
-  'islandora%3AcriticalEditionCollection',
-  'islandora%3AsourceCollection',
+    'islandora:criticalEditionCollection',
+    'islandora:sourceCollection',
   );
-  $url = array_pop($breadcrumbs);
-  preg_match("/href=\"(.*?)\"/i", $url, $matches);
-  $raw_link = $matches[0];
-  $link_parts = explode('/', $raw_link);
-  $link = str_replace('"', '', array_pop($link_parts));
-  if (in_array($link, $objects_to_reroute)) {
-    $url = str_replace('/islandora/object/', '/islandora/emic/collection/', $url);
+  if (in_array($object->id, $objects_to_reroute)) {
+    $old = array_pop($breadcrumbs);
+    $new = str_replace('/islandora/object/', '/islandora/emic/collection/', $old);
+    array_push($breadcrumbs, $new);
   }
-  array_push($breadcrumbs, $url);
 }
